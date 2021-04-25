@@ -521,7 +521,7 @@ session是基于cookie的，用户登录后服务器会为登录用户创建一�
 2. 存取方式的不同：
    Cookie中保存的是字符串，Session保存的是对象
 3. 安全性（隐私策略）的不同 ：
-   Cookie存储在浏览器中，对客户端是可见的，客户端的一些程序可能会窥探、复制以至修正Cookie中的内容。而Session存储在服务器上，对客户端是透明的，不存在敏感信息泄露的风险。 假如选用Cookie，比较好的方法是，敏感的信息如账号密码等尽量不要写到Cookie中。最好是像Google、Baidu那样将Cookie信息加密，提交到服务器后再进行解密，保证Cookie中的信息只要本人能读得懂。而假如选择Session就省事多了，反正是放在服务器上，Session里任何隐私都能够有效的保护。
+   Cookie存储在浏览器中，对客户端是可见的，客户端的一些程序可能会窥探、复制以至修正Cookie中的内容。而Session存储在服务器上，对客户端是透明的，不存在敏感信息泄露的风险。 假如选用Cookie，比较好的方法是，敏感的信息如账号密码等尽量不要写到Cookie中。最好是像Google、Baidu那样将Cookie信息加密，提交到服务器后再进行解密。而假如选择Session就省事多了，反正是放在服务器上，Session里任何隐私都能够有效的保护。
 4. 有效期上的不同：
    只需要设置Cookie的过期时间属性为一个很大很大的数字，Cookie就可以在浏览器保存很长时间。由于Session依赖于名为SESSIONID的Cookie，而Cookie SESSIONID的过期时间默认为–1，只需关闭了浏览器（一次会话结束），该Session就会失效。
 5. 对服务器造成的压力不同 ：
@@ -533,7 +533,7 @@ session是基于cookie的，用户登录后服务器会为登录用户创建一�
 
 ### token
 
-上面说到的Session和Cookie机制来保持会话，会存在一个问题：客户端浏览器只要保存自己的SessionID即可，而服务器却要保存所有用户的Session信息，这对于服务器来说开销较大，而且不利用服务器的扩展。它与 session 方式最大的不同是用户状态不存储在服务器端，而是存储在 token 中并保存在客户端的cookie、sessionStorage、localStorage，再次请求时**不一定默认携带**，需要在请求拦截器位置给请求头中添加认证字段Authorization携带token信息，服务器端就可以通过token确认用户登录状态。
+上面说到的Session和Cookie机制来保持会话，会存在一个问题：客户端浏览器只要保存自己的SessionID即可，而服务器却要保存所有用户的Session信息，这对于服务器来说开销较大，而且不利用服务器的扩展。它与 session 方式最大的不同是用户状态不存储在服务器端，而是存储在 token 中并保存在客户端的cookie、sessionStorage、localStorage，再次请求时**不一定默认携带**，需要给请求头中添加Authorization认证字段并携带token信息，服务器端就可以通过token确认用户登录状态。
 
 ##### 优点：
 

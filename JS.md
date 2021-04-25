@@ -1019,8 +1019,114 @@ new共经过了4个阶段
    </script>
    ```
 
-
 ### 30. 设计模式
+
+1. #### 单例模式
+
+   保证一个类仅有一个实例，并提供一个访问它的全局访问点。实现的方法为先判断实例存在与否，如果存在则直接返回，如果不存在就创建了再返回，这就确保了一个类只有一个实例对象。
+
+   ```javascript
+   class CreateUser {
+       constructor(name) {
+           this.name = name;
+       }
+       getName() {
+            return this.name;
+       }
+   }
+   // 代理实现单例模式
+   var ProxyMode = (function() {
+       var instance = null;
+       return function(name) {
+           if(!instance) {
+               instance = new CreateUser(name);
+           }
+           return instance;
+       }
+   })();
+   // 测试单体模式的实例
+   var a = new ProxyMode("aaa");
+   var b = new ProxyMode("bbb");
+   // 因为单体模式是只实例化一次，所以下面的实例是相等的
+   console.log(a === b);    //true
+   ```
+
+2. #### 装饰者模式
+
+   在不改变对象自身的基础上，在程序运行期间给对象动态地添加方法。
+
+   例如：现有4种型号的自行车分别被定义成一个单独的类，如果给每辆自行车都加上前灯、尾灯、铃铛这3个配件，如果用类继承的方式，需要创建4*3=12个子类。但如果通过装饰者模式，只需要创建3个类。
+
+   装饰者模式适用的场景：
+
+   1. 原有方法维持不变，在原有方法上再挂载其他方法来满足现有需求；
+   2. 函数的解耦，将函数拆分成多个可复用的函数，再将拆分出来的函数挂载到某个函数上，实现相同的效果但增强了复用性。
+
+   ```js
+   Function.prototype.before = function(beforefn) {
+       var self = this;    //保存原函数引用
+       return function(){  //返回包含了原函数和新函数的 '代理函数'
+           beforefn.apply(this, arguments);    //执行新函数，修正this
+           return self.apply(this,arguments);  //执行原函数
+       }
+   }
+   Function.prototype.after = function(afterfn) {
+       var self = this;
+       return function(){
+           var ret = self.apply(this,arguments);
+           afterfn.apply(this, arguments);
+           return ret;
+       }
+   }
+   var func = function() {
+       console.log('2');
+   }
+   //func1和func3为挂载函数
+   var func1 = function() {
+       console.log('1');
+   }
+   var func3 = function() {
+       console.log('3');
+   }
+   func = func.before(func1).after(func3);
+   func();
+   ```
+
+3. #### 代理模式
+
+   明星都有经纪人作为代理。如果想请明星来办一场商业演出，只能联系他的经纪人。经纪人会把商业演出的细节和报酬都谈好之后，再把合同交给明星签。
+
+   本文举一个使用代理对象加载图片的例子来理解代理模式,当网络不好的时候，图片的加载需要一段时间，这就会产生空白，影响用户体验，这时候我们可在图片真正加载完之前，使用一张loading占位图片，等图片真正加载完再给图片设置src属性。
+
+   ```js
+   class MyImage {
+       constructor() {
+           this.img = new Image()
+           document.body.appendChild(this.img)
+       }
+       setSrc(src) {
+           this.img.src = src
+       }
+   }
+   
+   class ProxyImage {
+       constructor() {
+           this.proxyImage = new Image()
+       }
+   
+       setSrc(src) {
+           let myImageObj = new MyImage()
+           myImageObj.setSrc('file://loading.png')  //本地loading图片的url
+           this.proxyImage.src = src
+           this.proxyImage.onload = function() {
+               myImageObj.setSrc(src) // 图片
+           }
+       }
+   }
+   
+   var proxyImage = new ProxyImage()
+   proxyImage.setSrc('http://xxx.png') //服务器资源url
+   ```
 
 4. #### 观察者模式
 
@@ -1082,7 +1188,7 @@ new共经过了4个阶段
    subject.notify();
    ```
    
-2. #### 发布订阅模式（Publisher && Subscriber）
+5. #### 发布订阅模式（Publisher && Subscriber）
 
    基于一个事件（主题）通道，希望接收通知的对象 Subscriber 通过自定义事件订阅主题，被激活事件的对象 Publisher 通过发布主题事件的方式通知各个订阅该主题的 Subscriber 对象。
 
@@ -1248,8 +1354,22 @@ function sum(...args1) {
     return sum(x+y)
   }
 }
-
 console.log(sum(1,2,2,5)(7)()) // 17
+
+function sum(...args1) {
+  let x = args1.reduce((tolal, next) => tolal + next)
+  const fn = function (...args2) {
+    let y = args2.reduce((tolal, next) => tolal + next)
+    // 递归调用
+    return sum(x + y)
+  }
+  fn.sumOf = function () {
+    return x;
+  }
+  return fn;
+}
+console.log(sum(1, 2, 3).sumOf()) // 6
+console.log(sum(1)(2)(3).sumOf()) // 6
 ```
 
 #### 数组扁平化
@@ -1374,7 +1494,7 @@ const postorderTraversal = (root) => {
 
 ### 33. JS千分位
 
-#### toLocaleString()
+#### toLocalString()
 
 #### 正则实现
 
@@ -1393,3 +1513,107 @@ function format (num) {
 运行过程
 
 ![img](https://images2017.cnblogs.com/blog/738658/201801/738658-20180115110625115-930619959.png)
+
+### 34. promise并发控制
+
+```js
+class Scheduler {
+  constructor(maxNum) {
+    // 保存添加进来的promise
+    this.list = []
+    // 正在工作的数量
+    this.workingNum = 0
+    this.maxNum = maxNum
+  }
+  // 添加任务
+  add(promiseCreator) {
+    this.list.push(promiseCreator)
+  }
+  // 启动限制的并发任务
+  start() {
+    for(let i = 0; i < this.maxNum; i++) {
+      this.doWork()
+    }
+  }
+  doWork() {
+    if (this.list.length && this.workingNum < this.maxNum) {
+      this.workingNum++
+      this.list.shift()().then(() => {
+        // 空出了一个位置，执行下一个任务
+        this.workingNum--
+        this.doWork()
+      })
+    }
+  }
+}
+// 异步任务
+const timeout = time => new Promise(resolve => setTimeout(resolve, time))
+const scheduler = new Scheduler(2)
+// 添加异步任务
+const addTask = (time, order) => {
+  scheduler.add(() => timeout(time).then(() => console.log(order)))
+}
+
+addTask(1000, 1)
+addTask(500, 2)
+addTask(300, 3)
+addTask(400, 4)
+
+scheduler.start()
+```
+
+### 35. proxy
+
+Proxy 用于修改某些操作的默认行为，等同于在语言层面做出修改，所以属于一种“元编程”（meta programming），即对编程语言进行编程。
+
+Proxy 可以理解成，在目标对象之前架设一层“拦截”，外界对该对象的访问，都必须先通过这层拦截，因此提供了一种机制，可以对外界的访问进行过滤和改写。
+
+```js
+var obj = new Proxy({}, {
+  get: function (target, propKey, receiver) {
+    console.log(`getting ${propKey}!`);
+    return Reflect.get(target, propKey, receiver);
+  },
+  set: function (target, propKey, value, receiver) {
+    console.log(`setting ${propKey}!`);
+    return Reflect.set(target, propKey, value, receiver);
+  }
+});
+obj.count = 1
+//  setting count!
+++obj.count
+//  getting count!
+//  setting count!
+//  2
+```
+
+### 36. 原型链
+
+1. #### 原型
+
+   - 所有`引用类型`都有一个`__proto__(隐式原型)`属性，属性值是一个普通的对象
+   - 所有`函数`都有一个`prototype(原型)`属性，属性值是一个普通的对象
+   - 所有`引用类型的__proto__`属性`指向`它`构造函数的prototype`
+
+2. ### 原型链
+
+   当访问一个对象的某个属性时，会先在这个对象本身属性上查找，如果没有找到，则会去它的__proto__隐式原型上查找，即它的构造函数的prototype，如果还没有找到就会再在构造函数的prototype的__proto__中查找，这样一层一层向上查找就会形成一个链式结构，我们称为原型链。
+
+### 37. 微信扫码登录
+
+1. 二维码生成
+
+   - 用户打开网站的登录首页的时候，浏览器就会向对应网页服务器发送获取**登录二维码**的请求，服务器收到请求后，会随机生成一个 `uuid`，将这个 `uuid` 作为key值存入redis服务器，同时设置一个过期时间，一旦过期后，用户登录二维码需要进行刷新重新获取。
+   - 同时，将这个key值和公司的验证字符串合在一起，通过二维码生成接口（微信开发平台），生成一个二维码的图片。然后，将二维码图片和 `uuid` 一起返回给用户浏览器。
+
+2. 用户扫码
+
+   - 用户拿出手机扫描二维码，就可以得到一个验证信息和一个 `uuid`。
+   - 手机端将解析到的数据与微信账号绑定，向微信开发平台发送**登录验证**请求，微信开发平台验证绑定数据，调用网站后台的回调接口，发送授权临时票据 `code` ，如果授权成功，返回一个确认信息给手机端。
+   - 手机端收到返回后，将**登录确认框**显示给用户。
+   - 用户确认是进行的登录操作后，手机再次发送请求。
+   - 服务器拿到 `uuId` 和 `userId` 后，**将用户的userid作为value值存入redis中以uuid作为key的键值对中**。
+
+   ![img](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/66d463b6ee1f4f72b7367eb7ab2aa1d8~tplv-k3u1fbpfcp-zoom-1.image)
+
+> https://juejin.cn/post/6881597417637511181
